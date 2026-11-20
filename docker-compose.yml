@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: eagle-eye-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - PORT=8000
+      - CORS_ORIGINS=*
+      - STORAGE_BACKEND=local
+      - DATABASE_URL=sqlite:///data/eagle_eye.db
+      - JWT_SECRET_KEY=eagle-eye-super-secret-production-jwt-key-2026-secure
+    volumes:
+      - backend-data:/app/data
+
+volumes:
+  backend-data:
