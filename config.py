@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
 
+from typing import Union, List
+
 BASE_DIR = Path(__file__).resolve().parent
 
 class Settings(BaseSettings):
@@ -29,8 +31,19 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 480  # 8 hours
     
-    # CORS Origins
-    CORS_ORIGINS: list[str] = ["*"]
+    # CORS Origins (accepts string or list of strings to avoid pydantic SettingsError on Render)
+    CORS_ORIGINS: Union[str, List[str]] = ["*"]
+
+    def get_cors_origins(self) -> List[str]:
+        if isinstance(self.CORS_ORIGINS, list):
+            return self.CORS_ORIGINS
+        if self.CORS_ORIGINS.startswith("[") and self.CORS_ORIGINS.endswith("]"):
+            import json
+            try:
+                return json.loads(self.CORS_ORIGINS)
+            except Exception:
+                pass
+        return [x.strip() for x in self.CORS_ORIGINS.split(",") if x.strip()]
 
     class Config:
         env_file = ".env"
