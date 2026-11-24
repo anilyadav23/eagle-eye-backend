@@ -125,7 +125,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     }
 
 @auth_router.post("/register")
-async def register_user(req: RegisterUserRequest, request: Request, current_user: dict = Depends(get_current_user)):
+async def register_user(req: RegisterUserRequest, request: Request):
     # Check if username or email exists
     existing = db_manager.get_user_by_username(req.username)
     if existing:
@@ -146,7 +146,7 @@ async def register_user(req: RegisterUserRequest, request: Request, current_user
     })
 
     db_manager.log_audit(
-        user_id=current_user["id"],
+        user_id=new_user["id"],
         action="USER_CREATED",
         entity_type="USER",
         entity_id=new_user["id"],
@@ -156,7 +156,7 @@ async def register_user(req: RegisterUserRequest, request: Request, current_user
 
     return {
         "success": True,
-        "message": f"User {new_user['username']} created successfully.",
+        "message": "Student profile created! Approval request has been sent to HOD and Teacher for verification.",
         "user": {
             "id": new_user["id"],
             "username": new_user["username"],
