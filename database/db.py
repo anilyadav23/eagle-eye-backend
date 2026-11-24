@@ -291,23 +291,37 @@ def init_db():
         )
     ''')
 
-    # Seed Default Users if table is empty
-    cursor.execute("SELECT COUNT(*) as cnt FROM users")
-    user_count = cursor.fetchone()["cnt"]
-    if user_count == 0:
-        now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-        admin_hash = get_password_hash("adminPassword123!")
-        guard_hash = get_password_hash("guardPassword123!")
+    # Seed Default Users if table is empty or update/insert role accounts
+    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    hod_hash = get_password_hash("Anil@2026")
+    teacher_hash = get_password_hash("teacher123")
+    student_hash = get_password_hash("student123")
+    admin_hash = get_password_hash("admin123")
 
-        cursor.execute('''
-            INSERT INTO users (id, username, email, password_hash, role, full_name, is_active, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-        ''', ("usr-admin", "admin", "admin@eagleeye.security", admin_hash, "Admin", "System Security Administrator", now_str))
+    # Ensure role accounts exist for standard role logins
+    default_users = [
+        ("usr-hod", "HODECC", "hodecc@campus.edu", hod_hash, "HOD", "ECEHOD", 1, now_str),
+        ("usr-teacher", "teacher", "teacher@campus.edu", teacher_hash, "Teacher", "Prof. Anjali Sen (Faculty)", 1, now_str),
+        ("usr-student", "student", "student@campus.edu", student_hash, "Student", "Rahul Sharma (Roll: CS23A001)", 1, now_str),
+        ("usr-admin", "admin", "admin@eagleeye.security", admin_hash, "Admin", "System Security Administrator", 1, now_str),
+    ]
 
-        cursor.execute('''
-            INSERT INTO users (id, username, email, password_hash, role, full_name, is_active, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?)
-        ''', ("usr-guard", "guard", "guard@eagleeye.security", guard_hash, "Guard", "On-Duty Security Officer", now_str))
+    for uid, uname, uemail, phash, urole, fname, iactive, cdate in default_users:
+        cursor.execute("SELECT id FROM users WHERE username = ?", (uname,))
+        row = cursor.fetchone()
+        if not row:
+            cursor.execute('''
+                INSERT INTO users (id, username, email, password_hash, role, full_name, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (uid, uname, uemail, phash, urole, fname, iactive, cdate))
+        else:
+            # Update password hash and role to guarantee standard credentials work
+            cursor.execute('''
+                UPDATE users SET password_hash = ?, role = ?, full_name = ? WHERE username = ?
+            ''', (phash, urole, fname, uname))
+
+    # Clean up old demo 'hod' user if present
+    cursor.execute("DELETE FROM users WHERE username = 'hod'")
 
     conn.commit()
     conn.close()
