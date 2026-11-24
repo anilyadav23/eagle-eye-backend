@@ -77,6 +77,13 @@ async def login(req: LoginRequest, request: Request):
             detail="Invalid username or password."
         )
 
+    # If the user is a student, ensure their registration has been approved
+    if user.get("role") == "Student" and user.get("is_active") == 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your registration profile is currently pending approval by HOD or Faculty Teacher. Once approved, you will be able to sign in."
+        )
+
     access_token = create_access_token(
         data={"sub": user["id"], "username": user["username"], "role": user["role"]},
         expires_delta=timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
@@ -125,12 +132,17 @@ async def register_user(req: RegisterUserRequest, request: Request, current_user
         raise HTTPException(status_code=400, detail="Username or email already in use.")
 
     pwd_hash = get_password_hash(req.password)
+    
+    # Students start with is_active = 0 pending HOD/Teacher approval
+    is_active_initial = 0 if req.role == "Student" else 1
+
     new_user = db_manager.create_user({
         "username": req.username,
         "email": str(req.email),
         "password_hash": pwd_hash,
         "role": req.role,
-        "full_name": req.full_name or req.username
+        "full_name": req.full_name or req.username,
+        "is_active": is_active_initial
     })
 
     db_manager.log_audit(
